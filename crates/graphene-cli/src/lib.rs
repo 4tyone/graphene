@@ -4,3 +4,4 @@ pub mod cli;
 pub mod out;
 pub mod plan;
 pub mod run;
+pub mod skill;

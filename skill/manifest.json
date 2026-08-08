@@ -19,6 +19,21 @@
     "--quiet": "Emit nothing; communicate only through the exit code."
   },
   "groups": {
+    "workspace": {
+      "about": "Set a repository up to work through Graphene.",
+      "commands": {
+        "init": {
+          "about": "Install the agent skill into a repository, and create the store",
+          "use_when": "Once per repository, before anything else. Writes .claude/skills/graphene/ and .graphene/store.db.",
+          "args": [
+            "path"
+          ],
+          "flags": [
+            "--force"
+          ]
+        }
+      }
+    },
     "graphs": {
       "about": "Create, validate, approve, and derive graphs.",
       "commands": {
@@ -647,6 +662,10 @@
           "flags": [
             "--file"
           ]
+        },
+        "evidence": {
+          "about": "What the accumulated graphs say about the guidance (spec 09 \u00a77)",
+          "use_when": "Reviewing whether the decomposition advice is working: gates nobody declines, capabilities that fail most, plans that keep needing amendment."
         }
       }
     },

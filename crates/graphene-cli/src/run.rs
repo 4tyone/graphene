@@ -62,6 +62,32 @@ fn run(args: Cli, fmt: Format) -> R {
 
     match args.command {
         // ------------------------------------------------------------ graphs
+        Command::Init { path, force } => {
+            let root = path.canonicalize().unwrap_or(path.clone());
+            let installed = crate::skill::install(&root, force)
+                .map_err(|e| Failure::Store(format!("{}: {e}", root.display())))?;
+
+            // Creating the store here means the first real command does not have
+            // to, and `gr status` in a fresh repo answers instead of erroring.
+            let store_path = root.join(graphene_store::STORE_DIR).join(graphene_store::STORE_FILE);
+            Store::open(&store_path)?;
+
+            Ok(ok(
+                &json!({
+                    "skill": installed.root,
+                    "store": store_path,
+                    "written": installed.written,
+                    "skipped": installed.skipped,
+                    "next": if installed.written.is_empty() && !installed.skipped.is_empty() {
+                        "already installed; pass --force to overwrite"
+                    } else {
+                        "ask your agent to plan a task, or run `gr new --task \"...\"`"
+                    },
+                }),
+                fmt,
+            ))
+        }
+
         Command::New { task, title, description, tag, tokens } => {
             let mut store = Store::open(&store_path)?;
             let seed = format!("{}-{}", now().0, std::process::id());
@@ -119,6 +145,7 @@ fn run(args: Cli, fmt: Format) -> R {
                     passed: report.ok,
                     errors: report.errors.len() as u32,
                     warnings: report.warnings.len() as u32,
+                    codes: code_counts(&report),
                 },
             )?;
 
@@ -777,6 +804,11 @@ fn run(args: Cli, fmt: Format) -> R {
             ))
         }
 
+        Command::Evidence {} => {
+            let store = Store::open(&store_path)?;
+            Ok(ok(&graphene_exec::evidence::gather(&store)?, fmt))
+        }
+
         Command::Rebuild => {
             let mut store = Store::open(&store_path)?;
             store.rebuild()?;
@@ -864,6 +896,16 @@ fn swept(store_path: &Path, graph: &GraphId) -> Result<Executor, Failure> {
     let mut exec = Executor::new(Store::open(store_path)?);
     exec.sweep_deadlines(graph, now())?;
     Ok(exec)
+}
+
+/// Which codes fired and how often, so `gr evidence` can answer "are we still
+/// writing fake edges?" rather than only "how many findings were there".
+fn code_counts(report: &graphene_check::Report) -> Vec<(String, u32)> {
+    let mut counts: std::collections::BTreeMap<String, u32> = Default::default();
+    for f in report.errors.iter().chain(report.warnings.iter()) {
+        *counts.entry(f.code.as_str().to_string()).or_default() += 1;
+    }
+    counts.into_iter().collect()
 }
 
 fn registry_path(store_path: &Path) -> PathBuf {

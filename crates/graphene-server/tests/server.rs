@@ -123,7 +123,7 @@ impl Seeded {
         review.capability = "review".into();
         let review_id = review.id.clone();
         self.push(Event::NodeAdd { node: Box::new(review) });
-        self.push(Event::CheckResult { passed: true, errors: 0, warnings: 0 });
+        self.push(Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] });
         self.push(Event::NodeDone { node: review_id, output: json!({}), spend: Spend::default() });
         for to in
             [GraphState::Checked, GraphState::Reviewed, GraphState::Approved, GraphState::Running]

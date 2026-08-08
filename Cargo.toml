@@ -13,8 +13,10 @@ members = [
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85"
-license = "MIT"
-repository = "https://github.com/…/graphene"
+license = "Apache-2.0"
+repository = "https://github.com/4tyone/graphene"
+homepage = "https://github.com/4tyone/graphene"
+authors = ["4tyone"]
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

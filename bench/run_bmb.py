@@ -31,6 +31,51 @@ from mnemebrain_benchmark.scoring import aggregate_by_category  # noqa: E402
 from mnemebrain_benchmark.system_runner import SystemBenchmarkRunner  # noqa: E402
 
 
+def check_against_committed(artifact: dict, committed: pathlib.Path) -> int:
+    """Fail the build if the score went down.
+
+    Spec 10 §9 wants the score tracked rather than badged, precisely so a
+    regression stops a commit instead of quietly changing a number on a page.
+    """
+    if not committed.exists():
+        print("no committed score to compare against")
+        return 0
+
+    was = json.loads(committed.read_text())
+    problems = []
+
+    old_checks = was.get("checks_passed", 0)
+    new_checks = artifact["checks_passed"]
+    if new_checks < old_checks:
+        problems.append(f"checks passed fell: {old_checks} -> {new_checks}")
+
+    for name, before in (was.get("categories") or {}).items():
+        after = artifact["categories"].get(name)
+        if after is None:
+            problems.append(f"category `{name}` disappeared")
+            continue
+        if before.get("score") is not None and after.get("score") is None:
+            problems.append(f"`{name}` was scored and is now skipped")
+        elif (
+            before.get("score") is not None
+            and after.get("score") is not None
+            and after["score"] < before["score"] - 1e-9
+        ):
+            problems.append(
+                f"`{name}` regressed: {before['score']:.4f} -> {after['score']:.4f}"
+            )
+
+    if problems:
+        print("\nBMB regression:")
+        for p in problems:
+            print(f"  {p}")
+        print("\nIf the change is deliberate, commit the new bench/score.json with it.")
+        return 1
+
+    print("no regression against the committed score")
+    return 0
+
+
 def main() -> int:
     scenarios = load_bmb_scenarios()
     adapter = GrapheneAdapter()
@@ -93,7 +138,10 @@ def main() -> int:
     }
 
     out = HERE / "score.json"
-    out.write_text(json.dumps(artifact, indent=2) + "\n")
+    check_only = "--check" in sys.argv
+    regression = check_against_committed(artifact, out) if check_only else 0
+    if not check_only:
+        out.write_text(json.dumps(artifact, indent=2) + "\n")
 
     width = max(len(k) for k in by_category)
     print(f"{'category':<{width}}  score   scenarios")
@@ -105,6 +153,8 @@ def main() -> int:
     print(f"score over claimed categories: {overall_scored * 100:.1f}%")
     print(f"score over all 8 categories:   {overall_all * 100:.1f}%")
     print(f"skipped: {', '.join(skipped) or 'none'}")
+    if check_only:
+        return regression
     print(f"\nartifact: {out}")
     return 0
 

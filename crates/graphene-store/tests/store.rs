@@ -390,7 +390,7 @@ fn compaction_drops_only_records_that_cannot_change_the_fold() {
                 &graph,
                 Actor::session("s1"),
                 Timestamp(100 + i),
-                Event::CheckResult { passed: i == 2, errors: 0, warnings: 0 },
+                Event::CheckResult { passed: i == 2, errors: 0, warnings: 0, codes: vec![] },
             )
             .unwrap();
     }

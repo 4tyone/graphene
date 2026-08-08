@@ -4,6 +4,7 @@
 //! state and writes the decision — which is why it runs inside `Store::mutate`,
 //! under the write lock, rather than as a read followed by an append.
 
+pub mod evidence;
 mod status;
 
 use std::collections::BTreeMap;

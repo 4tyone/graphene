@@ -568,7 +568,7 @@ fn graph_lifecycle_requires_check_review_and_approval_in_order() {
         "check must pass first"
     );
 
-    l.s(Event::CheckResult { passed: true, errors: 0, warnings: 0 });
+    l.s(Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] });
     l.s(Event::GraphState { to: GraphState::Checked, reason: None });
     assert_eq!(l.state().graph.as_ref().unwrap().state, GraphState::Checked);
 
@@ -588,7 +588,7 @@ fn open_findings_block_the_reviewed_transition() {
     let target = l.node("fat-node", NodeKind::Agent, vec![]);
     let review = l.node("review-granularity", NodeKind::Review, vec![]);
 
-    l.s(Event::CheckResult { passed: true, errors: 0, warnings: 0 });
+    l.s(Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] });
     l.s(Event::GraphState { to: GraphState::Checked, reason: None });
 
     let finding = graphene_core::id::FindingId::for_finding(&review, 0);

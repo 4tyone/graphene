@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" role="img" aria-label="Graphene">
+  <title>Graphene</title>
+  <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M14 3 L23.5 8.5 L23.5 19.5 L14 25 L4.5 19.5 L4.5 8.5 Z"/>
+  </g>
+  <g fill="currentColor">
+    <circle cx="14" cy="3" r="1.9"/>
+    <circle cx="23.5" cy="8.5" r="1.9"/>
+    <circle cx="23.5" cy="19.5" r="1.9"/>
+    <circle cx="14" cy="25" r="1.9"/>
+    <circle cx="4.5" cy="19.5" r="1.9"/>
+    <circle cx="4.5" cy="8.5" r="1.9"/>
+  </g>
+</svg>

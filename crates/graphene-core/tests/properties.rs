@@ -250,17 +250,42 @@ fn generate(seed: u64, steps: usize) -> Generated {
     Generated { records, beliefs, derived, observations }
 }
 
-const SEEDS: [u64; 24] = [
+const FAST_SEEDS: [u64; 24] = [
     1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946,
     17711, 28657, 46368, 75025,
 ];
+
+/// Every commit runs the fixed 24. `GRAPHENE_SEEDS=n` widens the space for the
+/// nightly run (spec 10 §9) without changing what a normal `cargo test` costs.
+///
+/// The extra seeds are a contiguous range rather than a random draw, so "seed
+/// 3182 failed" is a complete reproduction on any machine.
+fn seeds() -> Vec<u64> {
+    match std::env::var("GRAPHENE_SEEDS").ok().and_then(|v| v.parse::<u64>().ok()) {
+        Some(n) if n > FAST_SEEDS.len() as u64 => {
+            let mut v = FAST_SEEDS.to_vec();
+            v.extend(100_000..100_000 + (n - FAST_SEEDS.len() as u64));
+            v
+        }
+        _ => FAST_SEEDS.to_vec(),
+    }
+}
+
+/// How deep each generated log goes. Nightly reaches further into the state
+/// space than a commit-time run has time for.
+fn steps(base: usize) -> usize {
+    match std::env::var("GRAPHENE_STEPS").ok().and_then(|v| v.parse::<usize>().ok()) {
+        Some(n) if n > base => n,
+        _ => base,
+    }
+}
 
 /// `fold(log) == fold(log)`, always. Same log in, same state out — the property
 /// every other guarantee rests on.
 #[test]
 fn determinism_the_same_log_always_folds_to_the_same_state() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let a = fold(&g.records).unwrap_or_else(|e| panic!("seed {seed}: {e}"));
         let b = fold(&g.records).unwrap();
         assert_eq!(a, b, "seed {seed}: the fold is not a function of its log");
@@ -275,8 +300,8 @@ fn determinism_the_same_log_always_folds_to_the_same_state() {
 /// between `gr rebuild` and the incremental path every write takes.
 #[test]
 fn rebuild_equivalence_incremental_folding_matches_a_full_rebuild() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let rebuilt = fold(&g.records).unwrap();
 
         let mut incremental = State::default();
@@ -292,8 +317,8 @@ fn rebuild_equivalence_incremental_folding_matches_a_full_rebuild() {
 /// `fold(log, up_to: n)` is the state a live fold was in after event n.
 #[test]
 fn point_in_time_matches_the_live_fold_at_that_moment() {
-    for seed in SEEDS.iter().take(8) {
-        let g = generate(*seed, 60);
+    for seed in seeds().iter().take(8) {
+        let g = generate(*seed, steps(60));
         let mut live = State::default();
         for r in &g.records {
             apply(&mut live, r).unwrap();
@@ -310,8 +335,8 @@ fn point_in_time_matches_the_live_fold_at_that_moment() {
 /// I2 — nothing deletes. The log only grows, and so does the belief set.
 #[test]
 fn non_deletion_no_event_ever_reduces_the_belief_count() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let mut state = State::default();
         let mut high_water = 0usize;
         for r in &g.records {
@@ -331,8 +356,8 @@ fn non_deletion_no_event_ever_reduces_the_belief_count() {
 /// nothing in a generated log corroborates from a distinct source.
 #[test]
 fn fidelity_never_falls_and_never_rises_without_evidence() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let mut state = State::default();
         let mut prior: std::collections::BTreeMap<BeliefId, Fidelity> = Default::default();
         for r in &g.records {
@@ -359,8 +384,8 @@ fn fidelity_never_falls_and_never_rises_without_evidence() {
 /// I7 — every derived belief sits at or above the join of its support.
 #[test]
 fn sensitivity_is_never_below_the_join_of_support() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let state = fold(&g.records).unwrap();
 
         for (from, edge, to) in &state.belief_edges {
@@ -385,8 +410,8 @@ fn sensitivity_is_never_below_the_join_of_support() {
 /// support chains must still reach a fixed point.
 #[test]
 fn cascade_terminates_on_every_generated_graph() {
-    for seed in SEEDS {
-        let g = generate(seed, 200);
+    for seed in seeds() {
+        let g = generate(seed, steps(200));
         let state = fold(&g.records).unwrap();
 
         // Reaching here at all is termination; the assertion is that the result
@@ -411,8 +436,8 @@ fn cascade_terminates_on_every_generated_graph() {
 /// explicit supersede moves it, never a retraction.
 #[test]
 fn an_observation_is_never_out_without_a_contradiction_or_a_supersede() {
-    for seed in SEEDS {
-        let g = generate(seed, 150);
+    for seed in seeds() {
+        let g = generate(seed, steps(150));
         let state = fold(&g.records).unwrap();
 
         for id in &g.observations {
@@ -435,8 +460,8 @@ fn an_observation_is_never_out_without_a_contradiction_or_a_supersede() {
 #[test]
 fn contested_support_propagates_to_what_rests_on_it() {
     let mut checked = 0;
-    for seed in SEEDS {
-        let g = generate(seed, 150);
+    for seed in seeds() {
+        let g = generate(seed, steps(150));
         let state = fold(&g.records).unwrap();
 
         for id in &g.derived {
@@ -469,8 +494,8 @@ fn contested_support_propagates_to_what_rests_on_it() {
 /// fold came from the log. Neither invents nor loses.
 #[test]
 fn the_fold_holds_exactly_what_the_log_recorded() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let state = fold(&g.records).unwrap();
         let recorded: BTreeSet<&BeliefId> = g.beliefs.iter().collect();
         let folded: BTreeSet<&BeliefId> = state.beliefs.keys().collect();
@@ -482,8 +507,8 @@ fn the_fold_holds_exactly_what_the_log_recorded() {
 /// shuffling *when* things were observed must not change *what* was recorded.
 #[test]
 fn arrival_order_does_not_decide_what_is_believed() {
-    for seed in SEEDS.iter().take(8) {
-        let g = generate(*seed, 80);
+    for seed in seeds().iter().take(8) {
+        let g = generate(*seed, steps(80));
         let state = fold(&g.records).unwrap();
         for b in state.beliefs.values() {
             assert!(b.recorded_at.0 > 0, "seed {seed}: `{}` has no log position", b.id);
@@ -500,8 +525,8 @@ fn arrival_order_does_not_decide_what_is_believed() {
 /// isolation.
 #[test]
 fn every_prefix_of_a_valid_log_is_itself_valid() {
-    for seed in SEEDS.iter().take(8) {
-        let g = generate(*seed, 80);
+    for seed in seeds().iter().take(8) {
+        let g = generate(*seed, steps(80));
         for cut in 1..=g.records.len() {
             fold(&g.records[..cut])
                 .unwrap_or_else(|e| panic!("seed {seed}: prefix of {cut} does not fold: {e}"));
@@ -513,8 +538,8 @@ fn every_prefix_of_a_valid_log_is_itself_valid() {
 /// the fold as JSON, so a lossy round-trip would corrupt every cached state.
 #[test]
 fn a_fold_survives_a_serialization_round_trip() {
-    for seed in SEEDS {
-        let g = generate(seed, 120);
+    for seed in seeds() {
+        let g = generate(seed, steps(120));
         let state = fold(&g.records).unwrap();
         let json = serde_json::to_string(&state).unwrap();
         let back: State = serde_json::from_str(&json).unwrap();

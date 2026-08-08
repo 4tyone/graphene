@@ -21,6 +21,7 @@ graphene-check.workspace = true
 graphene-exec.workspace = true
 graphene-server.workspace = true
 clap.workspace = true
+rust-embed.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

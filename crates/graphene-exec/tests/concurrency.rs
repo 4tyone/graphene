@@ -150,7 +150,7 @@ impl Fixture {
                 &graph,
                 Actor::System,
                 tick(),
-                Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+                Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
             )
             .unwrap();
         store

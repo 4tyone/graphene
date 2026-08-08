@@ -518,6 +518,7 @@ dependencies = [
  "graphene-exec",
  "graphene-server",
  "graphene-store",
+ "rust-embed",
  "serde",
  "serde_json",
  "thiserror",

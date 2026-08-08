@@ -35,6 +35,20 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Command {
+    // ----------------------------------------------------------- workspace
+    /// Install the agent skill into a repository, and create the store.
+    ///
+    /// Run this once per repository. It writes `.claude/skills/graphene/` so an
+    /// agent working here knows what `gr` is for, and what order to call it in.
+    Init {
+        /// Where to install. Defaults to the current directory.
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Overwrite skill files that already exist.
+        #[arg(long)]
+        force: bool,
+    },
+
     // ------------------------------------------------------------- graphs
     /// Create a graph from a task.
     New {
@@ -391,6 +405,12 @@ pub enum Command {
     // --------------------------------------------------------- integrity
     /// Run every gate. Exits 3 on failure.
     Validate { graph: Option<String> },
+    /// What the accumulated graphs say about the guidance (spec 09 §7).
+    ///
+    /// Gates nobody declines, capabilities that fail most, plans that keep
+    /// needing amendment. Counts over completed work — it says where to look,
+    /// not what to conclude.
+    Evidence {},
     /// Score the belief layer against the MnemeBrain belief benchmark.
     ///
     /// Drives the benchmark's own scenarios, runner and scoring through

@@ -105,7 +105,7 @@ impl Fixture {
                 &self.graph,
                 Actor::System,
                 at,
-                Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+                Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
             )
             .unwrap();
 
@@ -242,7 +242,7 @@ fn a_review_node_is_claimable_before_the_graph_runs() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();
@@ -892,7 +892,7 @@ fn next_action_walks_the_lifecycle() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();
@@ -1014,7 +1014,7 @@ fn a_review_nodes_findings_become_resolvable_findings() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();
@@ -1092,7 +1092,7 @@ fn a_finding_against_a_node_that_does_not_exist_is_refused() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();
@@ -1138,7 +1138,7 @@ fn a_finding_resolves_once() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();
@@ -1215,7 +1215,7 @@ fn review_is_not_complete_until_its_merge_owner_has_run() {
             &f.graph,
             Actor::System,
             at,
-            Event::CheckResult { passed: true, errors: 0, warnings: 0 },
+            Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] },
         )
         .unwrap();
     let at = f.tick();

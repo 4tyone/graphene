@@ -226,6 +226,10 @@ pub enum Event {
         errors: u32,
         #[serde(default)]
         warnings: u32,
+        /// Which codes fired, and how often. Counts alone cannot answer "are we
+        /// still writing fake edges?", which is the signal spec 09 §7 wants.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        codes: Vec<(String, u32)>,
     },
     ReviewFinding {
         id: FindingId,
@@ -392,7 +396,8 @@ mod tests {
     #[test]
     fn only_heartbeats_and_check_results_are_compactable() {
         assert!(Event::SessionHeartbeat { session: SessionId("s".into()) }.is_compactable());
-        assert!(Event::CheckResult { passed: true, errors: 0, warnings: 0 }.is_compactable());
+        assert!(Event::CheckResult { passed: true, errors: 0, warnings: 0, codes: vec![] }
+            .is_compactable());
         assert!(!Event::Retract {
             id: BeliefId::for_content(&GraphId::from_seed("t"), "c", "derived", "s"),
             reason: "r".into(),
