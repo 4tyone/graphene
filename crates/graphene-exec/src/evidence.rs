@@ -156,7 +156,7 @@ pub fn gather(store: &Store) -> Result<Evidence> {
             always_proceeds: (asked >= 2).then_some(asked == proceeded),
         })
         .collect();
-    e.gates.sort_by(|a, b| b.asked.cmp(&a.asked));
+    e.gates.sort_by_key(|g| std::cmp::Reverse(g.asked));
 
     e.lens_rejection_rate = lens
         .into_iter()

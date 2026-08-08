@@ -41,8 +41,12 @@ Graphene makes the plan a durable object instead:
 
 ## Install
 
-You need [Rust](https://rustup.rs) 1.85 or newer. Nothing else — no database
-server, no Node, no network at build or run time.
+You need [Rust](https://rustup.rs). Nothing else — no database server, no Node,
+no network at build or run time.
+
+The toolchain is pinned in `rust-toolchain.toml`, so `rustup` fetches the right
+version for you the first time you build. Earlier versions may well work; 1.97.1
+is the one that is tested.
 
 ```bash
 git clone https://github.com/4tyone/graphene
