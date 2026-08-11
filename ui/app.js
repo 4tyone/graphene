@@ -886,7 +886,16 @@ async function main() {
   wireCanvas();
   wirePicker();
   await load(true);
-  $("store-path").textContent = (await api("/api/health").catch(() => ({}))).store ?? "";
+  const health = await api("/api/health").catch(() => ({}));
+  $("store-path").textContent = health.store ?? "";
+  // Which binary is answering. The UI is compiled in, so a server older than
+  // the change you are looking for looks exactly like the change not working.
+  if (health.version) {
+    const age = health.built ? Date.now() / 1000 - health.built : null;
+    $("build").textContent =
+      `v${health.version}` + (age !== null ? ` · built ${ago(health.built * 1000)}` : "");
+    $("build").dataset.stale = age !== null && age > 86400 ? "1" : "0";
+  }
   subscribe();
   setInterval(load, 4000);
   window.addEventListener("resize", reframe);

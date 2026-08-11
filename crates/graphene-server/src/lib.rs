@@ -175,8 +175,17 @@ async fn health(AxumState(s): AxumState<Arc<Shared>>) -> impl IntoResponse {
         "ok": true,
         "protocol": PROTOCOL_VERSION,
         "store": s.store_path,
+        "version": env!("CARGO_PKG_VERSION"),
+        // Which build is answering. A binary older than the fix you are looking
+        // for is otherwise indistinguishable from the fix not working.
+        "built": build_stamp(),
         "sessions": s.hub.sessions_on(&GraphId::from_seed("")).await.len(),
     }))
+}
+
+/// When this binary was compiled, as a unix timestamp.
+fn build_stamp() -> u64 {
+    option_env!("GRAPHENE_BUILT").and_then(|s| s.parse().ok()).unwrap_or(0)
 }
 
 async fn list_graphs(AxumState(s): AxumState<Arc<Shared>>) -> impl IntoResponse {
