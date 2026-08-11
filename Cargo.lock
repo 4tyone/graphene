@@ -501,7 +501,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-check"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "graphene-core",
  "serde",
@@ -510,7 +510,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "clap",
  "graphene-check",
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "blake3",
  "data-encoding",
@@ -538,7 +538,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-exec"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "graphene-check",
  "graphene-core",
@@ -550,7 +550,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-server"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "futures-util",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "graphene-store"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "graphene-core",
  "rusqlite",
