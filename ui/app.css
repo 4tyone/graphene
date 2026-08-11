@@ -553,3 +553,23 @@ pre.d-json {
 .g-when { font-size: 10.5px; color: var(--graphite); white-space: nowrap; }
 
 .picker-empty { padding: 26px 14px; color: var(--graphite); font-size: 12px; }
+
+/* An output can be arbitrarily large. Bounded and wrapping, so the panel does
+   not scroll forever and a long string value does not run off to the right. */
+pre.d-json[data-big="1"] {
+  max-height: 300px;
+  overflow: auto;
+  resize: vertical;
+}
+pre.d-json {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: hidden;
+}
+.d-sec h3 { display: flex; align-items: baseline; gap: 8px; }
+.d-note {
+  margin-left: auto;
+  font-size: 9.5px; letter-spacing: .04em;
+  color: var(--graphite); text-transform: none;
+  font-variant-numeric: tabular-nums;
+}

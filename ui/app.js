@@ -20,6 +20,9 @@ const state = {
   /// anything, or every entry animation replays four times a minute.
   inboxSig: null,
   pickerSig: null,
+  detailSig: null,
+  /// The node the canvas was last panned to, so a re-render does not pan again.
+  focused: null,
   stream: null,
   layout: null,
   seq: 0,
@@ -299,6 +302,13 @@ function renderDetail() {
   const stage = document.querySelector(".stage");
   const [id] = [...state.selected];
 
+  // Rebuilding on every poll threw away your scroll position, which on a long
+  // output means the panel snapped to the top every four seconds. `seq` only
+  // moves when something actually happened.
+  const sig = `${id ?? ""}|${state.seq}`;
+  if (sig === state.detailSig) return;
+  state.detailSig = sig;
+
   if (!id || !state.fold) {
     stage.dataset.detail = "closed";
     body.hidden = true;
@@ -351,7 +361,7 @@ function renderDetail() {
     )));
   }
 
-  if (n.output) body.append(section("output", pre(n.output)));
+  if (n.output) body.append(section("output", pre(n.output), sizeOf(n.output)));
   if (n.checkpoints?.length) {
     body.append(section(`checkpoints (${n.checkpoints.length})`, pre(n.checkpoints.at(-1).state)));
   }
@@ -465,9 +475,11 @@ function toast(msg) {
   toastTimer = setTimeout(() => (t.dataset.show = "0"), 2200);
 }
 
-function section(title, content) {
+function section(title, content, note) {
   const s = node("div", "d-sec");
-  s.append(textNode("h3", "", title));
+  const h = textNode("h3", "", title);
+  if (note) h.append(textNode("span", "d-note", note));
+  s.append(h);
   s.append(content);
   return s;
 }
@@ -482,10 +494,24 @@ function rows(pairs) {
   return dl;
 }
 
+/// A node's output can be arbitrarily large. Rendered whole and unwrapped it
+/// makes the panel scroll forever and pushes long string values off to the
+/// right, so it gets its own bounded, wrapping box — with its size on the label
+/// when it is big enough to be worth knowing.
 function pre(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   const p = node("pre", "d-json");
-  p.textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  p.textContent = text;
+  const lines = text.split("\n").length;
+  if (lines > 14 || text.length > 1200) p.dataset.big = "1";
   return p;
+}
+
+function sizeOf(value) {
+  const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  const lines = text.split("\n").length;
+  if (lines <= 14 && text.length <= 1200) return null;
+  return `${lines} lines`;
 }
 
 const node = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
@@ -517,11 +543,18 @@ function afterSelect() {
   });
   $("copy-selection").disabled = state.selected.size === 0;
   renderDetail();
+
   // Bring the selection into view rather than re-centring the whole graph —
   // the panel just changed the canvas width, and what you clicked matters more
-  // than the overview.
+  // than the overview. Only when the selection *changed*: a poll that selects
+  // the same node again must not drag the canvas back under the cursor.
   const [first] = [...state.selected];
-  if (first) setTimeout(() => focusNode(first), 340);
+  if (first && first !== state.focused) {
+    state.focused = first;
+    setTimeout(() => focusNode(first), 340);
+  } else if (!first) {
+    state.focused = null;
+  }
 }
 
 function reframe() {
@@ -730,6 +763,8 @@ async function switchGraph(id) {
   state.layout = null;
   state.inboxSig = null;
   state.pickerSig = null;
+  state.detailSig = null;
+  state.focused = null;
 
   const url = new URL(location.href);
   url.searchParams.set("graph", id);
