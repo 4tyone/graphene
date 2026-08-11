@@ -28,7 +28,7 @@
            "Liberation Mono", monospace;
 
   --rail: 340px;
-  --detail: 400px;
+  --detail: 470px;
   --head: 68px;
   --foot: 30px;
 
@@ -573,3 +573,62 @@ pre.d-json {
   color: var(--graphite); text-transform: none;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── reading a node's output ──────────────────────────────────────────────
+   The sentences are the content. Give them the weight, and let the structure
+   sit behind them as labels rather than punctuation. */
+
+.v-wrap { position: relative; }
+
+.v-bar { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; }
+.v-toggle {
+  background: none; border: 1px solid var(--line);
+  border-radius: 2px; padding: 1px 6px;
+  font: 9.5px/1.7 var(--mono); letter-spacing: .05em;
+  color: var(--graphite); cursor: pointer;
+}
+.v-toggle:hover { color: var(--bone-dim); border-color: var(--graphite-d); }
+.v-toggle[data-on="1"] { color: var(--amber); border-color: rgba(242,166,59,.35); }
+
+.v-list { display: grid; gap: 1px; }
+.v-entry {
+  display: grid; grid-template-columns: 20px 1fr; gap: 8px;
+  padding: 9px 0; border-top: 1px solid var(--line-soft);
+}
+.v-entry:first-child { border-top: 0; padding-top: 2px; }
+.v-index {
+  font: 10px/1.6 var(--mono); color: var(--graphite-d);
+  font-variant-numeric: tabular-nums; text-align: right; padding-top: 2px;
+}
+.v-entry-body { min-width: 0; }
+
+.v-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+.v-chip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  border: 1px solid var(--line); border-radius: 2px;
+  padding: 1px 6px; background: var(--surface-3);
+  font: 10px/1.7 var(--mono);
+}
+.v-chip i { color: var(--graphite); font-style: normal; letter-spacing: .04em; }
+.v-chip b { color: var(--bone-dim); font-weight: 400; }
+/* the three the eye should find first */
+.v-chip[data-key="severity"] b, .v-chip[data-key="state"] b { color: var(--bone); }
+.v-chip[data-key="target"] b, .v-chip[data-key="node"] b { color: var(--bone); }
+
+/* The part you actually came to read. */
+.v-prose {
+  font-family: var(--serif);
+  font-size: 13.5px; line-height: 1.62;
+  color: var(--bone); white-space: pre-wrap; overflow-wrap: anywhere;
+  margin: 2px 0 0;
+}
+
+.v-field { margin-top: 8px; }
+.v-field:first-child { margin-top: 0; }
+.v-key {
+  font: 9.5px/1.8 var(--mono); letter-spacing: .09em; text-transform: uppercase;
+  color: var(--graphite); margin-bottom: 2px;
+}
+.v-scalar { font: 12px/1.6 var(--mono); color: var(--bone-dim); overflow-wrap: anywhere; }
+.v-nil { font: 11px/1.6 var(--mono); color: var(--graphite-d); }
+.v-obj > .v-field > .v-list { padding-left: 2px; }

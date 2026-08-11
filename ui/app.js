@@ -361,9 +361,9 @@ function renderDetail() {
     )));
   }
 
-  if (n.output) body.append(section("output", pre(n.output), sizeOf(n.output)));
+  if (n.output) body.append(valueSection("output", n.output, sizeOf(n.output)));
   if (n.checkpoints?.length) {
-    body.append(section(`checkpoints (${n.checkpoints.length})`, pre(n.checkpoints.at(-1).state)));
+    body.append(valueSection(`checkpoints (${n.checkpoints.length})`, n.checkpoints.at(-1).state));
   }
 
   const spend = n.spend || {};
@@ -475,9 +475,10 @@ function toast(msg) {
   toastTimer = setTimeout(() => (t.dataset.show = "0"), 2200);
 }
 
-function section(title, content, note) {
+function section(title, content, note, controls) {
   const s = node("div", "d-sec");
   const h = textNode("h3", "", title);
+  if (controls) h.append(controls);
   if (note) h.append(textNode("span", "d-note", note));
   s.append(h);
   s.append(content);
@@ -527,6 +528,113 @@ const shortId = (id) => (id ? id.slice(0, 9) + "…" : "");
 function ageOf(h) {
   if (!h.asked_at) return "waiting";
   return `waiting · seq ${h.asked_at}`;
+}
+
+// ─────────────────────────────────────────────────── reading a node's output
+//
+// A node's output is prose wearing JSON syntax. Rendered as pretty-printed
+// JSON, the braces and quotes get the visual weight and the sentences — the
+// only part anyone came to read — end up buried three indents deep in a
+// monospace block. This renders the shape instead: short fields become labels,
+// long text becomes prose, and lists of things become a list of things.
+//
+// The literal JSON is one click away, because sometimes you do need it.
+
+const LONG = 70;
+
+const isObj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+const isLong = (v) => typeof v === "string" && (v.length > LONG || v.includes("\n"));
+
+/// Fields worth putting on a header line: scalars short enough to read at a
+/// glance. Everything else has to earn its own block.
+function splitFields(obj) {
+  const brief = [], full = [];
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === null || v === undefined) continue;
+    if (isObj(v) || Array.isArray(v) || isLong(v)) full.push([k, v]);
+    else brief.push([k, v]);
+  }
+  return { brief, full };
+}
+
+function chip(key, value) {
+  const c = node("span", "v-chip");
+  c.dataset.key = key;
+  c.append(textNode("i", "", key), textNode("b", "", String(value)));
+  return c;
+}
+
+function prose(text) {
+  const p = node("div", "v-prose");
+  p.textContent = text;
+  return p;
+}
+
+function renderValue(value, depth = 0) {
+  if (value === null || value === undefined) return textNode("div", "v-nil", "—");
+
+  if (Array.isArray(value)) {
+    if (!value.length) return textNode("div", "v-nil", "empty");
+    const wrap = node("div", "v-list");
+    value.forEach((item, i) => {
+      const entry = node("div", "v-entry");
+      entry.append(textNode("span", "v-index", String(i + 1)));
+      const inner = node("div", "v-entry-body");
+      inner.append(renderValue(item, depth + 1));
+      entry.append(inner);
+      wrap.append(entry);
+    });
+    return wrap;
+  }
+
+  if (isObj(value)) {
+    const wrap = node("div", "v-obj");
+    const { brief, full } = splitFields(value);
+    if (brief.length) {
+      const line = node("div", "v-chips");
+      brief.forEach(([k, v]) => line.append(chip(k, v)));
+      wrap.append(line);
+    }
+    // A single text field under a set of chips needs no label of its own: the
+    // chips already said what this is, and the label costs a line per entry.
+    const soleText = full.length === 1 && isLong(full[0][1]);
+    for (const [k, v] of full) {
+      const block = node("div", "v-field");
+      if (!soleText) block.append(textNode("div", "v-key", k));
+      block.append(renderValue(v, depth + 1));
+      wrap.append(block);
+    }
+    if (!brief.length && !full.length) wrap.append(textNode("div", "v-nil", "empty"));
+    return wrap;
+  }
+
+  if (isLong(value)) return prose(value);
+  return textNode("div", "v-scalar", String(value));
+}
+
+/// A readable section for a value, with the literal JSON one click away.
+function valueSection(title, value, note) {
+  const wrap = node("div", "v-wrap");
+  const read = renderValue(value);
+  const raw = pre(value);
+  raw.hidden = true;
+  wrap.append(read, raw);
+
+  const controls = node("span", "v-bar");
+  const toggle = node("button", "v-toggle");
+  toggle.type = "button";
+  toggle.textContent = "raw";
+  toggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const showRaw = raw.hidden;
+    raw.hidden = !showRaw;
+    read.hidden = showRaw;
+    toggle.textContent = showRaw ? "read" : "raw";
+    toggle.dataset.on = showRaw ? "1" : "0";
+  });
+  controls.append(toggle, copyButton(JSON.stringify(value, null, 2), "copy"));
+
+  return section(title, wrap, note, controls);
 }
 
 // ─────────────────────────────────────────────────────── selection & view
