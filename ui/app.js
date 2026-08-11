@@ -16,6 +16,10 @@ const state = {
   /// Every graph in the store, refreshed alongside the fold so the picker is
   /// never showing counts from ten minutes ago.
   graphs: [],
+  /// Last-rendered signatures. A poll that changes nothing must not redraw
+  /// anything, or every entry animation replays four times a minute.
+  inboxSig: null,
+  pickerSig: null,
   stream: null,
   layout: null,
   seq: 0,
@@ -209,7 +213,25 @@ function duration(ms) {
   return m < 90 ? `${m}m` : `${Math.round(m / 60)}h`;
 }
 
+/// What the inbox actually draws. Rebuilding when this has not changed replays
+/// every card's entry animation on each poll, which reads as a flicker.
+function inboxSignature(awaiting) {
+  return JSON.stringify(
+    awaiting.map((h) => [
+      h.node,
+      h.ask,
+      h.asked_at,
+      h.escalated_after_ms ?? null,
+      (h.context || []).map((c) => [c.id, c.state, c.stale]),
+    ]),
+  );
+}
+
 function renderInbox() {
+  const sig = inboxSignature(state.awaiting);
+  if (sig === state.inboxSig) return;
+  state.inboxSig = sig;
+
   const list = $("inbox-list");
   list.replaceChildren();
   const count = state.awaiting.length;
@@ -632,9 +654,24 @@ function ago(ms) {
   return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 
-function renderPicker() {
-  const list = $("picker-list");
+function pickerSignature(graphs) {
+  return JSON.stringify(
+    graphs.map((g) => [
+      g.id, g.title, g.state, g.nodes_done, g.nodes_total,
+      g.nodes_awaiting, g.beliefs_contested, g.updated_at,
+    ]),
+  );
+}
+
+/// `force` for the filter box, where the data has not changed but what to show
+/// has.
+function renderPicker(force = false) {
   const q = $("picker-filter").value.trim().toLowerCase();
+  const sig = pickerSignature(state.graphs || []) + "|" + q + "|" + state.graph;
+  if (!force && sig === state.pickerSig) return;
+  state.pickerSig = sig;
+
+  const list = $("picker-list");
   const all = pickerOrder(state.graphs || []);
   const shown = q
     ? all.filter((g) =>
@@ -691,6 +728,8 @@ async function switchGraph(id) {
   state.selected.clear();
   state.viewPinned = false;
   state.layout = null;
+  state.inboxSig = null;
+  state.pickerSig = null;
 
   const url = new URL(location.href);
   url.searchParams.set("graph", id);
@@ -701,7 +740,7 @@ async function switchGraph(id) {
 }
 
 function openPicker() {
-  renderPicker();
+  renderPicker(true);
   $("picker").hidden = false;
   $("graph-switch").setAttribute("aria-expanded", "true");
   const f = $("picker-filter");
@@ -718,7 +757,7 @@ function wirePicker() {
   $("graph-switch").addEventListener("click", () =>
     $("picker").hidden ? openPicker() : closePicker());
   $("picker-scrim").addEventListener("click", closePicker);
-  $("picker-filter").addEventListener("input", renderPicker);
+  $("picker-filter").addEventListener("input", () => renderPicker(true));
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !$("picker").hidden) { closePicker(); return; }
