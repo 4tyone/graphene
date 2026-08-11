@@ -23,7 +23,11 @@
   </div>
 
   <div class="masthead-graph">
-    <h1 id="graph-title">—</h1>
+    <button id="graph-switch" class="graph-switch" aria-haspopup="listbox" aria-expanded="false"
+            title="Every graph in this store (g)">
+      <h1 id="graph-title">—</h1>
+      <svg class="caret" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1 L5 5 L9 1"/></svg>
+    </button>
     <p id="graph-task"></p>
   </div>
 
@@ -86,6 +90,21 @@
   <span class="grow"></span>
   <span class="muted">read-only</span>
 </footer>
+
+<!-- Every graph in the store. The store outlives any one session, so the
+     viewer has to be able to show you what else is in it. -->
+<div class="picker" id="picker" hidden>
+  <div class="picker-scrim" id="picker-scrim"></div>
+  <div class="picker-panel" role="listbox" aria-label="Graphs">
+    <div class="picker-head">
+      <h2>Graphs</h2>
+      <input id="picker-filter" type="search" placeholder="filter by title or tag" autocomplete="off" spellcheck="false">
+      <span class="picker-count" id="picker-count"></span>
+    </div>
+    <div class="picker-list" id="picker-list"></div>
+    <div class="picker-empty" id="picker-empty" hidden><p>Nothing matches.</p></div>
+  </div>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

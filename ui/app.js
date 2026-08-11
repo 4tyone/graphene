@@ -13,6 +13,10 @@ const state = {
   view: { x: 0, y: 0, k: 1 },
   // Set once the user pans or zooms; from then on the view is theirs to keep.
   viewPinned: false,
+  /// Every graph in the store, refreshed alongside the fold so the picker is
+  /// never showing counts from ten minutes ago.
+  graphs: [],
+  stream: null,
   layout: null,
   seq: 0,
 };
@@ -609,6 +613,124 @@ function wireCanvas() {
   });
 }
 
+// ─────────────────────────────────────────────────────── the graph picker
+
+/// Attention first, then whatever moved most recently. A store with fifty
+/// finished graphs and one waiting on a person should open on the one waiting.
+function pickerOrder(graphs) {
+  const rank = (g) => (g.nodes_awaiting > 0 ? 0 : g.beliefs_contested > 0 ? 1 : g.nodes_outstanding > 0 ? 2 : 3);
+  return [...graphs].sort((a, b) => rank(a) - rank(b) || (b.updated_at ?? 0) - (a.updated_at ?? 0));
+}
+
+function ago(ms) {
+  if (!ms) return "";
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+}
+
+function renderPicker() {
+  const list = $("picker-list");
+  const q = $("picker-filter").value.trim().toLowerCase();
+  const all = pickerOrder(state.graphs || []);
+  const shown = q
+    ? all.filter((g) =>
+        (g.title || "").toLowerCase().includes(q) ||
+        (g.task || "").toLowerCase().includes(q) ||
+        (g.tags || []).some((t) => t.toLowerCase().includes(q)))
+    : all;
+
+  $("picker-count").textContent = q ? `${shown.length}/${all.length}` : `${all.length}`;
+  $("picker-empty").hidden = shown.length > 0;
+  list.replaceChildren();
+
+  for (const g of shown) {
+    const row = node("button", "g-row");
+    row.type = "button";
+    row.dataset.state = g.state;
+    row.dataset.current = g.id === state.graph ? "1" : "0";
+    row.dataset.attention = g.nodes_awaiting > 0 || g.beliefs_contested > 0 ? "1" : "0";
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", g.id === state.graph ? "true" : "false");
+
+    row.append(node("span", "g-dot"));
+
+    const main = node("div", "g-main");
+    main.append(textNode("div", "g-title", g.title || g.task || g.id));
+
+    const sub = node("div", "g-sub");
+    sub.append(textNode("span", "", g.state));
+    sub.append(textNode("span", "", `${g.nodes_done}/${g.nodes_total} done`));
+    if (g.nodes_awaiting > 0) {
+      sub.append(textNode("span", "warn", `${g.nodes_awaiting} awaiting you`));
+    }
+    if (g.beliefs_contested > 0) {
+      sub.append(textNode("span", "bad", `${g.beliefs_contested} contested`));
+    }
+    for (const t of (g.tags || []).slice(0, 3)) sub.append(textNode("span", "g-tag", t));
+    main.append(sub);
+    row.append(main);
+
+    row.append(textNode("span", "g-when", ago(g.updated_at)));
+    row.addEventListener("click", () => switchGraph(g.id));
+    list.append(row);
+  }
+}
+
+/// Switching is a reload of the fold, not of the page — the socket is already
+/// open and the URL should stay shareable.
+async function switchGraph(id) {
+  closePicker();
+  if (id === state.graph) return;
+  state.graph = id;
+  state.fold = null;
+  state.seq = 0;
+  state.selected.clear();
+  state.viewPinned = false;
+  state.layout = null;
+
+  const url = new URL(location.href);
+  url.searchParams.set("graph", id);
+  history.replaceState(null, "", url);
+
+  await load(true);
+  subscribe();
+}
+
+function openPicker() {
+  renderPicker();
+  $("picker").hidden = false;
+  $("graph-switch").setAttribute("aria-expanded", "true");
+  const f = $("picker-filter");
+  f.value = "";
+  f.focus();
+}
+
+function closePicker() {
+  $("picker").hidden = true;
+  $("graph-switch").setAttribute("aria-expanded", "false");
+}
+
+function wirePicker() {
+  $("graph-switch").addEventListener("click", () =>
+    $("picker").hidden ? openPicker() : closePicker());
+  $("picker-scrim").addEventListener("click", closePicker);
+  $("picker-filter").addEventListener("input", renderPicker);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("picker").hidden) { closePicker(); return; }
+    // `g` opens it, unless you are typing somewhere.
+    const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName ?? "");
+    if (e.key === "g" && !typing && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      $("picker").hidden ? openPicker() : closePicker();
+    }
+  });
+}
+
 // ─────────────────────────────────────────────────────── data
 
 async function api(path) {
@@ -623,15 +745,18 @@ async function load(first = false) {
       const params = new URLSearchParams(location.search);
       const wanted = params.get("graph");
       const graphs = await api("/api/graphs");
+      state.graphs = graphs;
       const pick = wanted ? graphs.find((g) => g.id === wanted) : pickLiveliest(graphs);
       if (!pick) { document.documentElement.dataset.state = "empty"; return; }
       state.graph = pick.id;
     }
 
-    const [fold, awaiting] = await Promise.all([
+    const [fold, awaiting, graphs] = await Promise.all([
       api(`/api/graph/${state.graph}`),
       api(`/api/awaiting/${state.graph}`).catch(() => []),
+      api("/api/graphs").catch(() => state.graphs),
     ]);
+    state.graphs = graphs;
 
     const changed = fold.seq !== state.seq;
     state.fold = fold;
@@ -640,6 +765,7 @@ async function load(first = false) {
 
     renderHeader();
     renderInbox();
+    renderPicker();
     // A push can add or drop a node, so the view has to follow the new bounds —
     // otherwise a live update quietly moves something off-canvas. `reframe`
     // leaves the view alone once the user has panned or zoomed.
@@ -668,9 +794,14 @@ function setConn(status) {
 
 function subscribe() {
   if (!state.graph) return;
+  // The stream is per-graph, so switching has to drop the old one or the view
+  // keeps waking on a graph nobody is looking at.
+  state.stream?.close();
   const src = new EventSource(`/events?graph=${state.graph}`);
+  state.stream = src;
   src.onmessage = () => load();
   src.onerror = () => {
+    if (state.stream !== src) return;
     setConn("lost");
     src.close();
     setTimeout(subscribe, 2000);
@@ -679,6 +810,7 @@ function subscribe() {
 
 async function main() {
   wireCanvas();
+  wirePicker();
   await load(true);
   $("store-path").textContent = (await api("/api/health").catch(() => ({}))).store ?? "";
   subscribe();

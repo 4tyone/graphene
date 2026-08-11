@@ -209,6 +209,11 @@ premises that decision rests on — with the ones that have gone stale or contes
 called out, because that is the thing you would otherwise approve without
 noticing.
 
+Press **`g`** (or click the title) for every graph in the store, ordered by what
+needs attention first — anything awaiting a person, then anything contested, then
+whatever is still running. Filter by title or tag. Switching updates the URL, so
+a link to a graph is a link someone else can open.
+
 There is no write path. The only way out of the UI is a copy button for a node
 id, which you paste back to your agent.
 

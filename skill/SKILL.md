@@ -10,7 +10,10 @@ each node concluded, and who is doing what. It pushes changes to every session
 attached to the same graph.
 
 **It never calls a model and never executes a node.** It tracks; you do the
-work. Nothing here decides anything for you.
+work — or another agent does, running headless in its own process, which is what
+turns a graph into multi-agent orchestration
+([agents-as-nodes.md](references/agents-as-nodes.md)). Nothing here decides
+anything for you.
 
 ## The mental model
 
@@ -137,6 +140,7 @@ Full rules: [beliefs.md](references/beliefs.md).
 | [decomposition.md](references/decomposition.md) | **Drafting a plan.** The hard half. |
 | [nodes.md](references/nodes.md) | Writing the `task.v1` document — kinds, schemas, bindings, budgets |
 | [human-nodes.md](references/human-nodes.md) | Any node a person must answer |
+| [agents-as-nodes.md](references/agents-as-nodes.md) | **A node's work is done by another agent** — headless orchestration, and what it costs |
 | [beliefs.md](references/beliefs.md) | Recording facts, contradicting them, read-sets |
 | [review.md](references/review.md) | Instantiating and running the review subgraph |
 | [failure.md](references/failure.md) | A node failed, or a claim was refused |

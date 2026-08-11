@@ -455,3 +455,101 @@ pre.d-json {
 @media (max-width: 1180px) {
   :root { --rail: 292px; --detail: 340px; }
 }
+
+/* ── the graph picker ─────────────────────────────────────────────────────
+   The store outlives any one session and holds every graph ever run here, so
+   the title is a control rather than a label. */
+
+.graph-switch {
+  display: flex; align-items: center; gap: 8px;
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; cursor: pointer; text-align: left;
+  max-width: 100%;
+}
+.graph-switch .caret {
+  width: 9px; height: 6px; flex: none;
+  fill: none; stroke: var(--graphite); stroke-width: 1.4;
+  stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .16s var(--ease), stroke .16s var(--ease);
+}
+.graph-switch:hover h1 { color: #fff; }
+.graph-switch:hover .caret { stroke: var(--bone-dim); }
+.graph-switch[aria-expanded="true"] .caret { transform: rotate(180deg); stroke: var(--amber); }
+
+.picker { position: fixed; inset: 0; z-index: 40; }
+.picker-scrim {
+  position: absolute; inset: 0;
+  background: rgba(4,5,7,.62);
+  animation: fade .14s var(--ease);
+}
+.picker-panel {
+  position: absolute; top: calc(var(--head) - 6px); left: calc(var(--rail) + 22px);
+  width: min(660px, calc(100vw - var(--rail) - 60px));
+  max-height: min(70vh, 640px);
+  display: flex; flex-direction: column;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6), 0 2px 0 rgba(255,255,255,.02) inset;
+  animation: rise .16s var(--ease);
+}
+@keyframes fade { from { opacity: 0 } }
+@keyframes rise { from { opacity: 0; transform: translateY(-6px) } }
+
+.picker-head {
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 12px 14px; border-bottom: 1px solid var(--line-soft);
+}
+.picker-head h2 {
+  margin: 0; font-family: var(--serif); font-weight: 400;
+  font-size: 14px; color: var(--bone);
+}
+.picker-head input {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 2px; padding: 5px 8px;
+  font: 11px/1.4 var(--mono); color: var(--bone);
+}
+.picker-head input:focus { outline: none; border-color: var(--graphite); }
+.picker-count { font-size: 10.5px; color: var(--graphite); font-variant-numeric: tabular-nums; }
+
+.picker-list { overflow-y: auto; padding: 6px; }
+
+.g-row {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: baseline; gap: 11px;
+  width: 100%; text-align: left;
+  background: none; border: 0; border-radius: 2px;
+  padding: 9px 10px; cursor: pointer;
+  font: inherit; color: inherit;
+  border-left: 2px solid transparent;
+}
+.g-row:hover, .g-row:focus-visible { background: var(--surface-3); outline: none; }
+.g-row[data-current="1"] { background: var(--surface-3); border-left-color: var(--bone-dim); }
+.g-row[data-attention="1"] { border-left-color: var(--amber); }
+
+.g-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--graphite-d); align-self: center; }
+.g-row[data-state="running"] .g-dot { background: var(--cyan); }
+.g-row[data-state="done"]    .g-dot { background: var(--graphite); }
+.g-row[data-attention="1"] .g-dot { background: var(--amber); }
+
+.g-main { min-width: 0; }
+.g-title {
+  font-size: 12.5px; color: var(--bone);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.g-sub {
+  margin-top: 3px; font-size: 10.5px; color: var(--graphite);
+  display: flex; gap: 10px; flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+.g-sub .warn { color: var(--amber); }
+.g-sub .bad  { color: var(--rust); }
+.g-tag {
+  border: 1px solid var(--line); border-radius: 2px;
+  padding: 0 4px; color: var(--bone-dim);
+}
+.g-when { font-size: 10.5px; color: var(--graphite); white-space: nowrap; }
+
+.picker-empty { padding: 26px 14px; color: var(--graphite); font-size: 12px; }

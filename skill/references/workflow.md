@@ -49,6 +49,18 @@ time, so a mismatch is a refusal, not a warning.
 it when you have nothing runnable but the graph is not finished. It works with
 or without a server; you cannot tell the difference except in latency.
 
+**A node's work does not have to be yours.** Between `claim` and `done` you may
+shell out to another agent running headless — `claude -p`, `codex exec`, or
+anything else non-interactive — and report what it returned. That is how a graph
+becomes multi-agent orchestration rather than a to-do list you work alone.
+
+Each such run is a **fresh context** (real isolation, and everything it needs
+must be in the prompt) and leaves a **resumable session** worth recording in the
+node's output. It is also the most allowance-expensive shape you can build:
+every invocation reloads the system prompt and skills, and separate invocations
+share no cache. [agents-as-nodes.md](agents-as-nodes.md) has the rules and the
+cost model.
+
 ## Resolve
 
 The user pasted an id. They are not going to explain it, and you have no
